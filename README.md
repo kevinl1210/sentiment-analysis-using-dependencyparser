@@ -62,3 +62,7 @@
 	
 	Example:
 	> python evaluate_sentiment.py eval goldstandard.txt .\result\output_sentiment.txt evaluation.txt detailed
+
+## 9. Reference
+	> Automatically Detecting and Rating Product Aspects from Textual Customer Reviews
+	
