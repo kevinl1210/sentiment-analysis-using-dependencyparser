@@ -4,23 +4,20 @@ from nltk.stem import SnowballStemmer
 stem = SnowballStemmer('english').stem
 grep_tup = re.compile(r'(.+?), \((\S+), (\S+)\), (-*1)').findall
 
-# OK!
 def read_input(inp):
     with open(inp, 'r+') as fin:
         text = fin.read()
     return text
 
-# OK!
-def process_feat(f):         # called by import_goldstandard only
+def process_feat(f):
     return f.lower()
     #return stem(f.lower())
 
-# OK!
-def import_goldstandard(inptrue):                   # the goldstandard imported is not following the order as in goldstandard.txt
+def import_goldstandard(inptrue):
     global votes, goldstandard, goldstandard_tnum, goldstandard_str, multifeatgps
     tmp = read_input(inptrue).split('\n\n')
-    tmp = [record.strip().split('\n') for record in tmp] # tmp = [['A1WSO7X5LNEMRH B0007V8DS8 5.0 0.5668658561714404','phone, (good, positive), 1', ....], ....]
-    votes = [records[0] for records in tmp]             # votes only store reviewId to ntime, e.g. votes = ['A1WSO7X5LNEMRH B0007V8DS8 5.0 0.5668658561714404', ...]
+    tmp = [record.strip().split('\n') for record in tmp]
+    votes = [records[0] for records in tmp]
     goldstandard = {}
     multifeatgps = {}
     goldstandard_tnum = {}
@@ -32,9 +29,9 @@ def import_goldstandard(inptrue):                   # the goldstandard imported 
         goldstandard[vote] = {}
         goldstandard_tnum[vote] = 0
         multifeatgps[vote] = []
-        goldstandard_str[vote] = [record for record in records[1:] if record]           # goldstandard_str[vote] = ['aspect1', 'aspect2']
+        goldstandard_str[vote] = [record for record in records[1:] if record]
         for record in records[1:]:
-            try: tuplet = grep_tup(record)[0]                   # if dont match, put in insuccess
+            try: tuplet = grep_tup(record)[0]
             except: insuccess.append((vote,record))
             if '/' not in tuplet[0]: 
                 pfeat = process_feat(tuplet[0])
@@ -50,8 +47,7 @@ def import_goldstandard(inptrue):                   # the goldstandard imported 
     for vote, record in insuccess:
         print('\t%s: %s' % (vote, record))
 
-# OK!
-def import_result(inpresult):               # note that result has size = 100 only! not 2000, it will only import the result review from output_sentiment.txt which is in goldstandard.txt
+def import_result(inpresult):
     global result, trainsize
     tmp = read_input(inpresult).split('\n\n')
     tmp = [record.strip().split('\n') for record in tmp]
@@ -66,18 +62,16 @@ def import_result(inpresult):               # note that result has size = 100 on
             tuplet = grep_tup(record)[0]
             rappend(tuplet)
 
-# 
-def calculate_stat(vote, rtuplets):             # called by update_stat_by_votes only     # remeber rtuplets is not from goldstandard
+def calculate_stat(vote, rtuplets):
     global result_str
     result_str[vote] = []
     sappend = result_str[vote].append
-    ttuplets = goldstandard[vote]               # ttuplets = {'phone':{'good':('positive',1)}}   or {'phone':{'good':(...), 'great':(...)}
-                                                # goldstandard_tnum = {'A1234 ....': 1},  where 1 is # of hand written aspect/column, despite same aspect
-    gopnum = goldstandard_tnum[vote]            # for that vote in goldstandard, # of hand written aspect/column
-    ropnum = len(rtuplets)                      # rtuplets is the parameter!
-    tfeat = set(ttuplets.keys())                # for 1 tfeat = {aspect1, aspect2,...}  and DISTNCT!
-    rfeat = set([tuplet[0] for tuplet in rtuplets])     # similar to tfeat, but rfeat are the aspects from result
-    cfeatnum = len(rfeat & tfeat)               # find intersection
+    ttuplets = goldstandard[vote]
+    gopnum = goldstandard_tnum[vote]
+    ropnum = len(rtuplets)
+    tfeat = set(ttuplets.keys())
+    rfeat = set([tuplet[0] for tuplet in rtuplets])
+    cfeatnum = len(rfeat & tfeat)
     opcfeatnum = sum([len(ops) for feat, ops in ttuplets.items() if feat in rfeat])
     copfeatnum = 0
     copnum = 0
@@ -117,21 +111,15 @@ def calculate_stat(vote, rtuplets):             # called by update_stat_by_votes
             (cnegnum, gopnum) if gopnum != 0 else 1,
             (cnegnum, copnum) if copnum != 0 else None)
 
-# OK!
 def update_stat_by_votes():
     global stat_by_votes, result_str
     result_str = {}
-    stat_by_votes = {vote:calculate_stat(vote, rtuplets) for vote, rtuplets in result.items()}          # result.items() = [('A12344 ...', [(aspect, (opinion, positive), 1), (...)]), ('A1235677'....)]
-    # vote = 'A123455...'
-    # rtuples = [(aspect1, (adj1, positive), 1),(...),...]  it is not from goldstandard!!!!!!! not hand written
-    # stat_by_votes = {'A123 ....':((1,4),(1,4),None,...)}    => means A123... this vote has fp = 1/4, fr = 1/4, opp = None = '-'
+    stat_by_votes = {vote:calculate_stat(vote, rtuplets) for vote, rtuplets in result.items()}
 
-# 
-def stat_by_scores():     # called by final print_output only
+def stat_by_scores():
     return [[scores[i] for vote, scores in stat_by_votes.items()] for i in range(12)]
 
-#
-def avg_with_None(l):     # called by final print_output only
+def avg_with_None(l):
     tmp = [i if type(i)!=tuple else i[0]/i[1] for i in l if i != None]
     """
     if len(tmp) == 0:
@@ -141,9 +129,8 @@ def avg_with_None(l):     # called by final print_output only
     return (x, len(tmp))
     """
     return (sum(tmp)/len(tmp), len(tmp))
-
-# 
-def val_to_str(val):      # called by final print_output only
+ 
+def val_to_str(val):
     if val == None: return '-'
     if type(val) == int: return str(val)
     if type(val) == float: return '%.5f'%(val)
@@ -165,14 +152,12 @@ def print_output(outp):
             fwrite('\n\n')
             fwrite('\n\n'.join(['%s\ngold standard: %s\nextracted: %s'%(vote, ', '.join(['(%s)'%(s) for s in goldstandard_str[vote]]), ', '.join(result_str[vote])) for vote in votes]))
 
-# OK!
 def create_goldstandard(inpresult, evalsize, outp):
     votes = [' '.join(record.strip().split('\n')[0].split()[:-1]) for record in read_input(inpresult).split('\n\n')]
     evalset = sorted(random.sample(range(len(votes)), evalsize))
     with open(outp, 'w+') as fout:
         fout.write('\n\n'.join([votes[i] for i in evalset]))
 
-# 
 def main(inptrue, inpresult, outp, detailed = False):
     import_goldstandard(inptrue)
     print('Imported gold standard, evaluation set size: %d' % (len(goldstandard)))
@@ -184,12 +169,10 @@ def main(inptrue, inpresult, outp, detailed = False):
     update_stat_by_votes()
     print_output(outp)
 
-# OK!
 if __name__ == '__main__':
     global detailed
     detailed = False
-    if len(sys.argv) > 5: detailed = True if sys.argv[5] == 'detailed' else False       # > 5 means running eval   global variable detailed = true only if running eval and detailed argv = detailed
+    if len(sys.argv) > 5: detailed = True if sys.argv[5] == 'detailed' else False
     if sys.argv[1] == 'eval': main(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == 'init': create_goldstandard(sys.argv[2], int(sys.argv[3]), sys.argv[4])
     else: print('Usage: python3.4 evaluate_sentiment.py eval <goldstandard> <result> <output> (opt: detailed)\n       python3.4 evaluate_sentiment.py init <result> <evalset size> <output>')
-    # else user not inputting eval or init
