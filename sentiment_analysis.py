@@ -584,18 +584,6 @@ def filter_aspect_by_rank():
     print('\t%d aspect terms and %d candidates are filtered by PageRank algorithm' % (len(pagerank_filter), counter))
 
 
-def word_freq_lookup(text, wordlist):
-    # global full_text, corpus, full_wordlist, corpus_wordlist
-    tokenizer = RegexpTokenizer(r'\w+')
-    for review in text:
-        for sent in review:
-            for word in tokenizer.tokenize(sent):
-                if(stem(word.lower()) not in wordlist):
-                    wordlist[stem(word.lower())] = 1
-                else:
-                    wordlist[stem(word.lower())] += 1
-
-
 def print_features():
     """print features[] to features.txt"""
     global features
