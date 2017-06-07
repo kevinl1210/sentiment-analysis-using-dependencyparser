@@ -1,0 +1,4 @@
+gensim==0.13.4.1
+autocorrect==0.3.0
+pycorenlp==0.3.0
+networkx==1.11
