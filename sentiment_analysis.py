@@ -7,7 +7,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet as wn
 from nltk.corpus import wordnet_ic
 import numpy as np
-from sklearn.cluster import KMeans, AgglomerativeClustering, SpectralClustering
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import kmedoids
 from matplotlib import pyplot as plt
