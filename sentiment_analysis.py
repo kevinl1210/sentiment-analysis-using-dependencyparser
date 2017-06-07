@@ -1,8 +1,3 @@
-"""
-seem fyp: text information mining - aspect based sentiment anaylsis on customer reviews
-"""
-__author__ = 'Lee Kin Shing'
-
 import sys, os, re, string, math, datetime, random, pdb, pickle
 from nltk.tokenize import sent_tokenize, RegexpTokenizer, word_tokenize
 from autocorrect import spell
@@ -45,39 +40,6 @@ wnl = WordNetLemmatizer()
 G = nx.MultiGraph()
 # java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9000 -timeout 50000
 nlp = StanfordCoreNLP('http://localhost:9000')
-
-
-"""
-reviews[]: stores Review objects e.g. reviews[] = [Review object 1, Review obejct 2, ...]
-trainset[]: stores the the index of reviews that are trainset e.g. trainset = [2, 4, 6, 8, 9, 15, ...]
-full_text[]: 2D array to store each tokenized sentence of each review e.g. full_text[] = [["review0sent0", "review0sent1",...], ...]
-corpus[]: same as full_text[] but corpus[] only stores reviews that are in trainset e.g. corpus[] = [["review2sent0", "review2sent1",...], ...]
-candidates[]: dictionary that stores each LEMMATIZED feature and its opinion words as well as their corresponding appearance
-                e.g. candidates{} = {'phone': [['good', 'nice'], [(0, 2), (5,8)], ...]}, 0 here is the 0-th review in corpus[] or trainset[]
-                but not the one in full_text[], where in this example 0 is the 2nd review in full_text[]
-full_wordlist{}: dictionary that stores each of the word in the entire corpus of reviews and their corresponding occurrence count, note that
-                 the word in this wordlist are STEMMED
-                 e.g. full_wordlist{} = {'realli': 5, 'good': 17, ...}
-corpus_wordlist{}: same as full_wordlist{} but corpus_wordlist{} only stores reviews that are in trainset
-features[]: a SORTED list that stores every LEMMATIZED(for finding similarity score ) features generated from previous stages with duplicates
-            e.g. features = ['phone', 'phone', ..., 'product', 'product', ...]
-word_corpus[]: a list that stores list of tokenized sentences without regard to what review it belongs to
-               e.g. word_corpus[] = [['this', 'is', 'a', 'sent'], [...], ...]
-temp_score_array[]: same as score_array[], but it is used to transform to np array
-score_array[]: np array that stores the similarity score vector of each feature     score_array = [[0.1234,...], [...]]
-clusters[]: stores cluster labels e.g. clusters = [1, 2, 0.111, ...], which means the first feature in the features list has cluster label 1, and
-            so on, it has SAME len as the len of features[]
-clusters_dict{}: dictionary that stores labels and their corresponding group of features
-                 e.g. clusters_dict{} = {0: ['car', 'vehicle', ...], 1: ['phone', 'cellphone', ...], ...}
-clusters_for_candidates{}: dictionary that stores the candidates and the candidates' info in each clusters,
-                           e.g. clusters_for_candidates = {0: [..., ['phone', 'good', 10, 19, 0.74], ['phone', 'original', 0, 23, 0.001], ...], 1: [...], ...},
-                                the candidates in a cluster are stored by their sentiment score
-candidates_by_review{}: dictionary that stores candidates by reviews, the key is the corpus index, the value is list of candidates, it is for final
-                        output e.g. candidates_by_review{} = {0: [['good phone', 11], ['very bad product', 2]], 1: ..., ...}
-filtered_candidates_key[]: stores candidates and there corresponding information that are to be filtered
-                           e.g. filtered_candidates_key[] = [['phone', 'original', 0.01, 11, 23], ...]
-final_candidates[]: same as candidates but with filtered
-"""
 
 
 class Review:
@@ -550,15 +512,6 @@ def extract_features_opinions():
                                     dependent, governor, raw_opinion = find_adjacent_words(dependent, governor, dependent_i, governor_i, relation_list, res)
                                     # TODO: neg problem the neg relation is built with 'look' and 'not', not the opinion itself e.g. not looking good
                                     append_candidates(dependent, governor, i, j, int(governor.startswith('not')), raw_opinion, 'xcomp', False)
-                # ------------------------------------------------------------
-                # handle nsubjpass e.g. this phone is so busted!   (past tense verb as opinion)
-                # ------------------------------------------------------------
-                """
-                if(dependency == 'nsubjpass'):
-                    if(governor_pos == 'VBN' and dependent_pos in noun and len(dependent) > 1 and 'RRB' not in dependent and 'RRB' not in dependent and dependent not in stopword and governor not in stopword):
-                        dependent, governor, raw_opinion = find_adjacent_words(dependent, governor, dependent_i, governor_i, relation_list, res)
-                        append_candidates(dependent, governor, i, j, neg=int(governor.startswith('not')), raw_opinion, 'nsubjpass', False)
-                """
                 # ----------------------------------------------------------------------------------------------
                 # handle dobj e.g. it is nice to have this phone/ it is nice having this phone -> dobj + xcomp
                 #             e.g. it is nice that i bought this phone -> dobj + ccomp
@@ -641,45 +594,6 @@ def word_freq_lookup(text, wordlist):
                     wordlist[stem(word.lower())] = 1
                 else:
                     wordlist[stem(word.lower())] += 1
-
-
-def construct_wordlist():
-    """construct a list that store all the stemmed distinct words and their corresponding appearing location, which provides freq to us"""
-    print("---", str(datetime.datetime.now()), "---")
-    global full_text, corpus, full_wordlist, corpus_wordlist
-    full_wordlist = {}          # full_wordlist{} = {'it': n, 'is': n} where n is the freq of the word
-    corpus_wordlist = {}
-    word_freq_lookup(full_text, full_wordlist)
-    word_freq_lookup(corpus, corpus_wordlist)
-    print_full_wordlist()
-    print_corpus_wordlist()
-    print("\tConstructed wordlist; printing wordlist to full_wordlist.txt and corpus_wordlist.txt")
-
-
-def print_full_wordlist():
-    """print full_wordlist to full_wordlist.txt"""
-    with open(outdir+'full_wordlist.txt', 'w+') as fout:
-            fout.write('\n'.join(['%s: %d' % (word, full_wordlist[word]) for word in full_wordlist]))
-
-
-def print_corpus_wordlist():
-    """print corpus_wordlist to corpus_wordlist.txt"""
-    with open(outdir+'corpus_wordlist.txt', 'w+') as fout:
-            fout.write('\n'.join(['%s: %d' % (word, corpus_wordlist[word]) for word in corpus_wordlist]))
-
-
-def construct_features():
-    """generate sorted list of distinct lemmatized features according to candidates{}"""
-    print("---", str(datetime.datetime.now()), "---")
-    print('\tGenerating features from candidates...')
-    global features, candidates
-    features = []
-    for f in candidates.keys():
-        appearences = len(candidates[f][0])
-        features += appearences*[f]
-    features = sorted(features)
-    print_features()
-    print('\tGenerated final list of features; printing sorted features list to features.txt')
 
 
 def print_features():
@@ -800,14 +714,6 @@ def construct_similarity_score():
     print('\tConstructing similarity score array...')
     global features, candidates, score_array, temp_score_array
     temp_score_array = []
-    """
-    for i, feature1 in enumerate(features):
-        temp_score_array.append([])
-        for j, feature2 in enumerate(features):
-            score = cal_similarity_score(feature1, feature2)
-            temp_score_array[-1].append(score)
-        candidates[i].set_similarity_score(temp_score_array[-1])
-    """
     for feature in features:
         while True:
             try:
@@ -874,8 +780,6 @@ def cluster_features():
     k = int(len(features)*0.3)
     print('\tClustering features with %s clusters...' % (str(k)))
     clustering = KMeans(n_clusters=k, random_state=0).fit(score_array)
-    # clustering = AgglomerativeClustering(n_clusters=k, affinity='cosine', linkage='ward').fit(score_array)
-    # clustering = SpectralClustering(n_clusters=k).fit(score_array)
     clusters = clustering.labels_
     # ===================
     # k- medoids
@@ -1064,8 +968,6 @@ def main():
     build_word2vec()
     import_candidates() if existfile(outdir+'candidates.txt') else extract_features_opinions()
     filter_aspect_by_rank()
-    # construct_wordlist()
-    # construct_features()
     # -------------------------------------------------------------------------------------
     import_similarity_score() if existfile(outdir+'score_array') else construct_similarity_score()
     import_clusters() if existfile(outdir+'clusters.txt') else cluster_features()
